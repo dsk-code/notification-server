@@ -1,7 +1,7 @@
+use crate::error::ServerError;
+
 use reqwest::Client;
 use serde::Serialize;
-
-use crate::error::ServerError;
 
 #[derive(Serialize)]
 pub struct LineSendMessege {
