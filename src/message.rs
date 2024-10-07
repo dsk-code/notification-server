@@ -8,18 +8,38 @@ pub struct LineSendMessege {
     message: String,
 }
 
-impl LineSendMessege {
-    pub async fn send_message(&self, token: String) -> Result<(), ServerError> {
-        let encode_message = serde_urlencoded::to_string(self)?;
-        let client = Client::new();
-        client
-            .post("https://notify-api.line.me/api/notify")
-            .bearer_auth(token)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .body(encode_message)
-            .send()
-            .await?;
+pub enum LineMessageKind {
+    Version1(LineSendMessege),
+}
 
-        Ok(())
+#[derive(Debug)]
+pub struct LineSender {
+    client: Client,
+    access_token: String,
+}
+
+impl LineSender {
+    pub fn new(access_token: String) -> Self {
+        Self {
+            client: Client::new(),
+            access_token,
+        }
+    }
+
+    pub async fn send(&self, message: LineMessageKind) -> Result<(), ServerError> {
+        match message {
+            LineMessageKind::Version1(message) => {
+                let encode_message = serde_urlencoded::to_string(message)?;
+                self.client
+                    .post("https://notify-api.line.me/api/notify")
+                    .bearer_auth(self.access_token.clone())
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(encode_message)
+                    .send()
+                    .await?;
+
+                Ok(())
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{error::ServerError, message::LineSendMessege, State};
+use crate::{error::ServerError, message::{LineMessageKind, LineSendMessege}, State};
 
 use axum::{response::IntoResponse, routing::post, Extension, Json, Router};
 use reqwest::StatusCode;
@@ -12,7 +12,7 @@ async fn send(
     Extension(state): Extension<Arc<State>>,
     Json(payload): Json<LineSendMessege>,
 ) -> Result<impl IntoResponse, ServerError> {
-    payload.send_message(state.token.clone()).await?;
+    state.line.send(LineMessageKind::Version1(payload)).await?;
     println!("send message");
     Ok(StatusCode::OK)
 }
