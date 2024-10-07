@@ -5,5 +5,10 @@ edition = "2021"
 
 [dependencies]
 axum = "0.7.6"
+dotenvy = "0.15.7"
+envy = "0.4.2"
+reqwest = "0.12.8"
+serde = { version = "1.0.210", features = ["derive"] }
+serde_urlencoded = "0.7.1"
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
