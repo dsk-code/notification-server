@@ -12,11 +12,14 @@ pub enum ServerError {
     InvalidRequest(#[from] reqwest::Error),
     #[error("InvalidEnvironmentVariable: {0}")]
     InvalidEnvironmentVariable(#[from] envy::Error),
+    #[error("InvalidRequest")]
+    InvalidRequestFormat,
 }
 
 impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
+            Self::InvalidRequestFormat => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 

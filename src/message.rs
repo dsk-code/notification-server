@@ -1,15 +1,22 @@
 use crate::error::ServerError;
 
+use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LineSendMessege {
-    message: String,
+pub struct LineSendMessage {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ScheduledMessage {
+    pub message: String,
+    pub send_at: DateTime<Utc>,
 }
 
 pub enum LineMessageKind {
-    Version1(LineSendMessege),
+    Version1(LineSendMessage),
 }
 
 #[derive(Debug)]
@@ -37,9 +44,13 @@ impl LineSender {
                     .body(encode_message)
                     .send()
                     .await?;
-
+                println!("sent a message");
                 Ok(())
             }
         }
     }
+
+    // pub async fn send_scheduled() -> Result<(), ServerError> {
+
+    // }
 }

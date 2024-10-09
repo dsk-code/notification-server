@@ -1,18 +1,13 @@
-mod error;
-mod message;
-mod router;
+use notification_server::{self as server, State};
 
-use crate::router::api::api;
+use server::error::ServerError;
+use server::message::LineSender;
+use server::router::api::api;
 
 use axum::Router;
-use message::LineSender;
 use serde::Deserialize;
 use std::sync::Arc;
-
-#[derive(Debug)]
-pub struct State {
-    line: Arc<LineSender>,
-}
+use tokio::sync::Mutex;
 
 #[derive(Deserialize, Debug)]
 struct Config {
@@ -20,11 +15,19 @@ struct Config {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), error::ServerError> {
+async fn main() -> Result<(), ServerError> {
     dotenvy::dotenv().ok();
     let config = envy::from_env::<Config>()?;
     let line = Arc::new(LineSender::new(config.access_token));
-    let state = Arc::new(State { line });
+    let schedule_queue = Arc::new(Mutex::new(Vec::new()));
+    let state = Arc::new(State {
+        line,
+        schedule_queue,
+    });
+    let cloned_state: Arc<State> = Arc::clone(&state);
+    tokio::spawn(async move {
+        cloned_state.polling_task().await;
+    });
     let app = Router::new().nest("/api/v1", api(state));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
 
