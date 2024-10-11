@@ -22,9 +22,11 @@ impl State {
             interval.tick().await;
 
             let now = Utc::now();
+            println!("current time: {}", now);
             let mut queue = self.schedule_queue.lock().await;
             let (to_send, remaining): (Vec<_>, Vec<_>) =
                 queue.drain(..).partition(|msg| msg.send_at <= now);
+            println!("number of messages remaining: {}", remaining.len());
             queue.extend(remaining);
             drop(queue);
 
