@@ -1,6 +1,6 @@
 use crate::error::ServerError;
 
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +12,7 @@ pub struct LineSendMessage {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ScheduledMessage {
     pub message: String,
-    pub send_at: DateTime<Utc>,
+    pub send_at: NaiveDateTime,
 }
 
 pub enum LineMessageKind {

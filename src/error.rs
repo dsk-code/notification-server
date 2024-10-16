@@ -14,6 +14,10 @@ pub enum ServerError {
     InvalidEnvironmentVariable(#[from] envy::Error),
     #[error("InvalidRequest")]
     InvalidRequestFormat,
+    #[error("Database migration failed: {0}")]
+    InvalidDatabaseMigration(#[from] sqlx::migrate::MigrateError),
+    #[error("failed in database: {0}")]
+    InvalidDatabase(#[from] sqlx::Error),
 }
 
 impl IntoResponse for ServerError {

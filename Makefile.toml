@@ -1,0 +1,3 @@
+[tasks.docker-compose_up]
+command = "docker-compose"
+args = ["up", "--build"]

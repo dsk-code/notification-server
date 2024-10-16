@@ -1,4 +1,6 @@
+use crate::database::messages::MessagesRepository;
 use crate::{
+    database::messages::InputMessagesEntity,
     error::ServerError,
     message::{LineMessageKind, LineSendMessage, ScheduledMessage},
     State,
@@ -27,6 +29,14 @@ async fn schedule(
     Extension(state): Extension<Arc<State>>,
     Json(payload): Json<ScheduledMessage>,
 ) -> Result<impl IntoResponse, ServerError> {
+    let db = MessagesRepository::new(state.pool.clone());
+    println!("Start adding to database");
+    db.add(InputMessagesEntity {
+        message: payload.message.clone(),
+        send_at: payload.send_at,
+    })
+    .await?;
+    println!("Added to database completed");
     let mut queue = state.schedule_queue.lock().await;
     queue.push(payload);
     drop(queue);
