@@ -1,18 +1,35 @@
-use crate::{error::ServerError, message::{LineMessageKind, LineSendMessege}, State};
+use crate::{
+    error::ServerError,
+    message::{LineMessageKind, LineSendMessage, ScheduledMessage},
+    State,
+};
 
 use axum::{response::IntoResponse, routing::post, Extension, Json, Router};
 use reqwest::StatusCode;
 use std::sync::Arc;
 
 pub fn router() -> Router {
-    Router::new().route("/send", post(send))
+    Router::new()
+        .route("/send", post(send))
+        .route("/schedule", post(schedule))
 }
 
 async fn send(
     Extension(state): Extension<Arc<State>>,
-    Json(payload): Json<LineSendMessege>,
+    Json(payload): Json<LineSendMessage>,
 ) -> Result<impl IntoResponse, ServerError> {
     state.line.send(LineMessageKind::Version1(payload)).await?;
     println!("send message");
+    Ok(StatusCode::OK)
+}
+
+async fn schedule(
+    Extension(state): Extension<Arc<State>>,
+    Json(payload): Json<ScheduledMessage>,
+) -> Result<impl IntoResponse, ServerError> {
+    let mut queue = state.schedule_queue.lock().await;
+    queue.push(payload);
+    drop(queue);
+    println!("schedule message");
     Ok(StatusCode::OK)
 }
