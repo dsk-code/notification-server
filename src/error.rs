@@ -18,6 +18,14 @@ pub enum ServerError {
     InvalidDatabaseMigration(#[from] sqlx::migrate::MigrateError),
     #[error("failed in database: {0}")]
     InvalidDatabase(#[from] sqlx::Error),
+    #[error("Invalid Key: {0}")]
+    InvalidKey(#[from] jsonwebtoken::errors::Error),
+    #[error("Failed to KeySet")]
+    InvalidKeySet,
+    #[error("Invalid Encode: {0}")]
+    InvalidEncode(jsonwebtoken::errors::Error),
+    #[error("Invalid Decode: {0}")]
+    InvalidDecode(jsonwebtoken::errors::Error),
 }
 
 impl IntoResponse for ServerError {

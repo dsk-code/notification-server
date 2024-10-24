@@ -11,11 +11,14 @@ use std::sync::Arc;
 async fn main() -> Result<(), ServerError> {
     dotenvy::dotenv().ok();
     let config = envy::from_env::<Config>()?;
+
     let state = Arc::new(server::init(config.clone()).await?);
+
     let cloned_state: Arc<State> = Arc::clone(&state);
     tokio::spawn(async move {
         cloned_state.polling_task().await;
     });
+
     let app = Router::new().nest("/api/v1", api(state));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
 
