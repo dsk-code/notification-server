@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO messages\n                    (message, send_at)\n                VALUES\n                    ($1, $2)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0ae6a747b78b6a6c0d3cef95fe1ea8db796352e842b5301006edb339c6b7bd45"
+}
