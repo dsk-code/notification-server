@@ -69,19 +69,8 @@ pub async fn init(config: Config) -> Result<State, ServerError> {
     let public_key = std::fs::read_to_string(config.public_key_path.as_str())?;
 
     auth::auth_init(private_key.as_bytes(), public_key.as_bytes())?;
-
-    let utc_now = Utc::now();
-    let encoding_key = &KEYS.get().ok_or(ServerError::InvalidKeySet)?.encoding_key;
     
-    let jwt = ChannelJwt::create(
-        config.channel_id.clone(),
-        config.kid.clone(),
-        utc_now,
-        encoding_key,
-    )?;
-
-    let channel_token_req = AccessTokenRequest::new(jwt);
-    let channel_access_token = Arc::new(channel_token_req.get_access_token().await?);
+    let channel_access_token = Arc::new(set_channel_access_token(config.clone()).await?);
 
     let pool = Arc::new(database::db_init(PgPool::connect(&config.database_url).await?).await?);
 
@@ -98,4 +87,21 @@ pub async fn init(config: Config) -> Result<State, ServerError> {
     };
 
     Ok(state)
+}
+
+async fn set_channel_access_token(config: Config) -> Result<ChannelAccessToken, ServerError> {
+    let utc_now = Utc::now();
+    let encoding_key = &KEYS.get().ok_or(ServerError::InvalidKeySet)?.encoding_key;
+
+    let jwt = ChannelJwt::create(
+        config.channel_id.clone(),
+        config.kid.clone(),
+        utc_now,
+        encoding_key,
+    )?;
+
+    let channel_token_req = AccessTokenRequest::new(jwt);
+    let token = channel_token_req.get_access_token().await?;
+
+    Ok(token)
 }
