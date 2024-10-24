@@ -16,7 +16,7 @@ reqwest = { version = "0.12.8", features = ["json"] }
 rsa = { version = "0.9.6", features = ["pem"] }
 serde = { version = "1.0.210", features = ["derive"] }
 serde_urlencoded = "0.7.1"
-sqlx = { version = "0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio", "uuid"] }
+sqlx = { version = "0.8.2", features = ["chrono", "macros", "migrate", "postgres", "runtime-tokio-rustls", "uuid"] }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
 urlencoding = "2.1.3"

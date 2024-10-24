@@ -69,7 +69,7 @@ pub async fn init(config: Config) -> Result<State, ServerError> {
     let public_key = std::fs::read_to_string(config.public_key_path.as_str())?;
 
     auth::auth_init(private_key.as_bytes(), public_key.as_bytes())?;
-    
+
     let channel_access_token = Arc::new(set_channel_access_token(config.clone()).await?);
 
     let pool = Arc::new(database::db_init(PgPool::connect(&config.database_url).await?).await?);
@@ -104,4 +104,16 @@ async fn set_channel_access_token(config: Config) -> Result<ChannelAccessToken, 
     let token = channel_token_req.get_access_token().await?;
 
     Ok(token)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_set_channel_access_token() {
+        
+    }
+
+
 }
