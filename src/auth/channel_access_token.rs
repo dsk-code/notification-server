@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 pub struct ChannelAccessToken {
     access_token: String,
-    expires_in: usize,
+    expires_in: u64,
     key_id: String,
 }
 
@@ -27,10 +27,14 @@ impl AccessTokenRequest {
     pub async fn get_access_token(&self) -> Result<ChannelAccessToken, ServerError> {
         let params = [
             ("grant_type", "client_credentials"),
-            ("client_assertion_type", "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"),
+            (
+                "client_assertion_type",
+                "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
+            ),
             ("client_assertion", self.jwt.token()),
         ];
 
+        println!("Start acquiring channel access token ");
         let res = self
             .client
             .post("https://api.line.me/oauth2/v2.1/token")
@@ -40,6 +44,7 @@ impl AccessTokenRequest {
             .await?
             .json::<ChannelAccessToken>()
             .await?;
+        println!("Channel access token acquisition completed");
 
         Ok(res)
     }
@@ -79,7 +84,7 @@ mod tests {
         .unwrap();
 
         let req = AccessTokenRequest::new(jwt);
-        
+
         let res = req.get_access_token().await;
 
         assert!(res.is_ok());
