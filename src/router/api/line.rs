@@ -1,4 +1,5 @@
 use crate::database::messages::MessagesRepository;
+use crate::model::line_webhook::{EventType, Webhook};
 use crate::{
     database::messages::InputMessagesEntity,
     error::ServerError,
@@ -9,40 +10,6 @@ use crate::{
 use axum::{response::IntoResponse, routing::post, Extension, Json, Router};
 use reqwest::StatusCode;
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WebhookEvent<T> {
-    destination: String,
-    events: Vec<T>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Unfollow {
-    #[serde(rename = "type")]
-    event_type: String,
-    mode: String,
-    timestamp: u64,
-    source: Option<Source>,
-    #[serde(rename = "webhookEventId")]
-    webhook_event_id: String,
-    #[serde(rename = "deliveryContext")]
-    delivery_context: DeliveryContext,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Source {
-    #[serde(rename = "type")]
-    source_type: String,
-    #[serde(rename = "userId")]
-    user_id: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct DeliveryContext {
-    #[serde(rename = "isRedelivery")]
-    is_redelivery: bool,
-}
 
 pub fn router() -> Router {
     Router::new()
@@ -51,10 +18,22 @@ pub fn router() -> Router {
         .route("/schedule", post(schedule))
 }
 
-async fn webhook_handler(Json(payload): Json<WebhookEvent<Unfollow>>) -> StatusCode {
+async fn webhook_handler(Json(payload): Json<Webhook>) -> StatusCode {
     for event in payload.events {
-        println!("type = {:?}", event.event_type);
-        println!("mode = {:?}", event.mode);
+        match event {
+            EventType::Follow(follow_event) => {
+                match chrono::DateTime::from_timestamp_millis(follow_event.timestamp as i64) {
+                    Some(datetime) => println!("[{}] followed", datetime),
+                    None => println!("Invalid time"),
+                };
+            }
+            EventType::Unfollow(unfollow_event) => {
+                match chrono::DateTime::from_timestamp_millis(unfollow_event.timestamp as i64) {
+                    Some(datetime) => println!("[{}] unfollowed", datetime),
+                    None => println!("Invalid time"),
+                };
+            }
+        }
     }
     StatusCode::OK
 }
@@ -64,7 +43,9 @@ async fn send(
     Json(payload): Json<LineSendMessage>,
 ) -> Result<impl IntoResponse, ServerError> {
     state.line.send(LineMessageKind::Version1(payload)).await?;
+
     println!("send message");
+
     Ok(StatusCode::OK)
 }
 
@@ -73,61 +54,34 @@ async fn schedule(
     Json(payload): Json<ScheduledMessage>,
 ) -> Result<impl IntoResponse, ServerError> {
     let db = MessagesRepository::new(state.pool.clone());
+
     println!("Start adding to database");
+
     db.add(InputMessagesEntity {
         message: payload.message.clone(),
         send_at: payload.send_at,
     })
     .await?;
+
     println!("Added to database completed");
+
     let mut queue = state.schedule_queue.lock().await;
     queue.push(payload);
     drop(queue);
+
     println!("schedule message");
+
     Ok(StatusCode::OK)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::model::line_webhook::{EventType, Webhook};
 
     use axum::{body, http::Request};
-    use serde::{Deserialize, Serialize};
-    use tower::ServiceExt;
     use serde_json::json;
-
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct WebhookEvent<T> {
-        destination: String,
-        events: Vec<T>,
-    }
-
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct Unfollow {
-        #[serde(rename = "type")]
-        event_type: String,
-        mode: String,
-        timestamp: u64,
-        source: Option<Source>,
-        #[serde(rename = "webhookEventId")]
-        webhook_event_id: String,
-        #[serde(rename = "deliveryContext")]
-        delivery_context: DeliveryContext,
-    }
-
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct Source {
-        #[serde(rename = "type")]
-        source_type: String,
-        #[serde(rename = "userId")]
-        user_id: String,
-    }
-
-    #[derive(Debug, Serialize, Deserialize)]
-    pub struct DeliveryContext {
-        #[serde(rename = "isRedelivery")]
-        is_redelivery: bool,
-    }
+    use tower::ServiceExt;
 
     pub fn test_router() -> Router {
         Router::new()
@@ -136,10 +90,22 @@ mod tests {
             .route("/schedule", post(schedule))
     }
 
-    async fn test_webhook_handler_fn(Json(payload): Json<WebhookEvent<Unfollow>>) -> StatusCode {
+    async fn test_webhook_handler_fn(Json(payload): Json<Webhook>) -> StatusCode {
         for event in payload.events {
-            println!("type = {:?}", event.event_type);
-            println!("mode = {:?}", event.mode);
+            match event {
+                EventType::Follow(follow_event) => {
+                    match chrono::DateTime::from_timestamp_millis(follow_event.timestamp as i64) {
+                        Some(datetime) => println!("[{}] followed", datetime),
+                        None => println!("Invalid time"),
+                    };
+                }
+                EventType::Unfollow(unfollow_event) => {
+                    match chrono::DateTime::from_timestamp_millis(unfollow_event.timestamp as i64) {
+                        Some(datetime) => println!("[{}] unfollowed", datetime),
+                        None => println!("Invalid time"),
+                    };
+                }
+            }
         }
         StatusCode::OK
     }
@@ -147,23 +113,24 @@ mod tests {
     #[tokio::test]
     async fn test_webhook_handler() {
         let json_body = json!({
-            "destination": "xxxxxxxxxx",
-            "events": [
-              {
-                "type": "unfollow",
-                "mode": "active",
-                "timestamp": 1462629479859u64,
-                "source": {
-                  "type": "user",
-                  "userId": "U4af4980629..."
-                },
-                "webhookEventId": "01FZ74A0TDDPYRVKNK77XKC3ZR",
-                "deliveryContext": {
-                  "isRedelivery": false
-                }
+          "destination": "xxxxxxxxxx",
+          "events": [
+            {
+              "type": "unfollow",
+              "mode": "active",
+              "timestamp": 1462629479859u64,
+              "source": {
+                "type": "user",
+                "userId": "U4af4980629..."
+              },
+              "webhookEventId": "01FZ74A0TDDPYRVKNK77XKC3ZR",
+              "deliveryContext": {
+                "isRedelivery": false
               }
-            ]
-          }).to_string();
+            }
+          ]
+        })
+        .to_string();
 
         let app = test_router();
 
@@ -175,7 +142,7 @@ mod tests {
             .unwrap();
 
         let res = app.oneshot(req).await.unwrap();
-        
+
         println!("{:?}", res);
         assert_eq!(res.status(), StatusCode::OK);
     }

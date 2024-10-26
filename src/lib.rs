@@ -2,6 +2,7 @@ pub mod auth;
 mod database;
 pub mod error;
 pub mod message;
+pub mod model;
 pub mod router;
 
 use crate::auth::KEYS;
