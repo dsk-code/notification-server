@@ -1,4 +1,5 @@
 use crate::error::ServerError;
+use crate::model::line_webhook::Emoji;
 
 use chrono::NaiveDateTime;
 use reqwest::Client;
@@ -15,8 +16,33 @@ pub struct ScheduledMessage {
     pub send_at: NaiveDateTime,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResponseMessage {
+    #[serde(rename = "replyToken")]
+    pub reply_token: String,
+    pub messages: Vec<Message>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Message {
+    #[serde(rename = "type")]
+    pub message_type: String,
+    pub text: String,
+    pub emojis: Option<Vec<Emoji>>
+}
+
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct Emoji {
+//     pub index: usize,
+//     #[serde(rename = "productId")]
+//     pub product_id: String,
+//     #[serde(rename = "emojiId")]
+//     pub emoji_id: String,
+// }
+
 pub enum LineMessageKind {
     Version1(LineSendMessage),
+    Version2(ResponseMessage),
 }
 
 #[derive(Debug)]
@@ -35,6 +61,7 @@ impl LineSender {
 
     pub async fn send(&self, message: LineMessageKind) -> Result<(), ServerError> {
         match message {
+            // 旧型なので廃止するか検討
             LineMessageKind::Version1(message) => {
                 let encode_message = serde_urlencoded::to_string(message)?;
                 self.client
@@ -46,7 +73,19 @@ impl LineSender {
                     .await?;
                 println!("sent a message");
                 Ok(())
-            }
+            },
+            LineMessageKind::Version2(message) => {
+                self.client
+                    .post("https://api.line.me/v2/bot/message/reply")
+                    .bearer_auth(self.access_token.clone())
+                    .header("Content-Type", "application/json")
+                    .json(&message)
+                    .send()
+                    .await?;
+                println!("sent a message");
+                Ok(())
+            },
+
         }
     }
 

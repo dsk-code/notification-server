@@ -1,6 +1,6 @@
 use crate::database::DbConnector;
 use crate::error::ServerError;
-use crate::message::ScheduledMessage;
+use crate::services::line::message::ScheduledMessage;
 
 use chrono::{Local, NaiveDateTime};
 use std::sync::Arc;
