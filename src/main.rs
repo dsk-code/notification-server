@@ -19,6 +19,17 @@ async fn main() -> Result<(), ServerError> {
         cloned_state.polling_task().await;
     });
 
+    // let cloned_state = Arc::clone(&state);
+    // let cloned_config = config.clone();
+    // tokio::spawn(async move {
+    //     if let Err(e) = cloned_state
+    //         .get_access_token_scheduled_task(cloned_config)
+    //         .await
+    //     {
+    //         eprintln!("Error: {:?}", e);
+    //     }
+    // });
+
     let app = Router::new().nest("/api/v1", api(state));
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
 

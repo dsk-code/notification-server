@@ -18,12 +18,12 @@ impl DbConnector {
     }
 
     pub async fn migration(&self) -> Result<(), ServerError> {
-        print!("Start migration");
+        println!("Start migration");
         sqlx::migrate!("./migrations/")
             .run(&self.pool)
             .await
             .map_err(error::ServerError::InvalidDatabaseMigration)?;
-        print!("Migration completed");
+        println!("Migration completed");
 
         Ok(())
     }

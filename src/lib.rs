@@ -1,22 +1,25 @@
 pub mod auth;
 mod database;
 pub mod error;
-pub mod message;
+pub mod model;
 pub mod router;
+pub mod services;
 
+// use crate::auth::KEYS;
+// use crate::auth::{channel_access_token::ChannelAccessToken, channel_jwt::ChannelJwt};
 use crate::database::{messages::MessagesRepository, DbConnector};
-use crate::message::{LineMessageKind, LineSendMessage, LineSender, ScheduledMessage};
-use crate::auth::{channel_jwt::ChannelJwt, channel_access_token::ChannelAccessToken};
-use crate::auth::KEYS;
+use crate::services::line::message::{LineMessageKind, LineSendMessage, LineSender, ScheduledMessage};
 
-use auth::channel_access_token::AccessTokenRequest;
-use chrono::{Local, Utc};
+use chrono::Local;
+// use auth::channel_access_token::{self, AccessTokenRequest};
+// use chrono::{Local, Utc};
 use error::ServerError;
 use serde::Deserialize;
 use sqlx::PgPool;
+use tokio::time::{interval, Duration};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{interval, Duration};
+// use tokio::time::{interval, sleep, Duration};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
@@ -24,8 +27,9 @@ pub struct Config {
     database_url: String,
     private_key_path: String,
     public_key_path: String,
-    kid: String,
-    channel_id: String,
+    // チャネルアクセストークンが2024-11-25まで発行できないので待機
+    // kid: String,
+    // channel_id: String,
 }
 
 #[derive(Debug)]
@@ -33,7 +37,8 @@ pub struct State {
     pub pool: Arc<DbConnector>,
     pub line: Arc<LineSender>,
     pub schedule_queue: Arc<Mutex<Vec<ScheduledMessage>>>,
-    pub channel_access_token: Arc<ChannelAccessToken>,
+    // チャネルアクセストークンが2024-11-25まで発行できないので待機
+    // pub channel_access_token: Arc<Mutex<ChannelAccessToken>>,
 }
 
 impl State {
@@ -62,6 +67,20 @@ impl State {
             }
         }
     }
+
+// チャネルアクセストークンが2024-11-25まで発行できないので待機
+//     pub async fn get_access_token_scheduled_task(&self, config: Config) -> Result<(), ServerError> {
+//         sleep(Duration::from_secs(30 * 24 * 60 * 60)).await;
+
+//         let mut interval = interval(Duration::from_secs(30 * 24 * 60 * 60));
+//         loop {
+//             interval.tick().await;
+
+//             let channel_access_token = set_channel_access_token(config.clone()).await?;
+//             let mut token_guard = self.channel_access_token.lock().await;
+//             *token_guard = channel_access_token;
+//         }
+//     }
 }
 
 pub async fn init(config: Config) -> Result<State, ServerError> {
@@ -70,7 +89,9 @@ pub async fn init(config: Config) -> Result<State, ServerError> {
 
     auth::auth_init(private_key.as_bytes(), public_key.as_bytes())?;
 
-    let channel_access_token = Arc::new(set_channel_access_token(config.clone()).await?);
+    // チャネルアクセストークンが2024-11-25まで発行できないので待機
+    // let channel_access_token =
+        // Arc::new(Mutex::new(set_channel_access_token(config.clone()).await?));
 
     let pool = Arc::new(database::db_init(PgPool::connect(&config.database_url).await?).await?);
 
@@ -83,37 +104,36 @@ pub async fn init(config: Config) -> Result<State, ServerError> {
         pool,
         line,
         schedule_queue,
-        channel_access_token,
     };
 
     Ok(state)
 }
 
-async fn set_channel_access_token(config: Config) -> Result<ChannelAccessToken, ServerError> {
-    let utc_now = Utc::now();
-    let encoding_key = &KEYS.get().ok_or(ServerError::InvalidKeySet)?.encoding_key;
+// チャネルアクセストークンが2024-11-25まで発行できないので待機
+// async fn set_channel_access_token(config: Config) -> Result<ChannelAccessToken, ServerError> {
+//     let utc_now = Utc::now();
+//     let encoding_key = &KEYS.get().ok_or(ServerError::InvalidKeySet)?.encoding_key;
 
-    let jwt = ChannelJwt::create(
-        config.channel_id.clone(),
-        config.kid.clone(),
-        utc_now,
-        encoding_key,
-    )?;
+//     let jwt = ChannelJwt::create(
+//         config.channel_id.clone(),
+//         config.kid.clone(),
+//         utc_now,
+//         encoding_key,
+//     )?;
 
-    let channel_token_req = AccessTokenRequest::new(jwt);
-    let token = channel_token_req.get_access_token().await?;
+//     let channel_token_req = AccessTokenRequest::new(jwt);
+//     let token = channel_token_req.get_access_token().await?;
 
-    Ok(token)
-}
+//     Ok(token)
+// }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[tokio::test]
-    async fn test_set_channel_access_token() {
-        
-    }
+//     #[tokio::test]
+//     async fn test_set_channel_access_token() {
 
+//     }
 
-}
+// }
